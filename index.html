@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caliper — fluid type and clamp() generator</title>
+<meta name="description" content="Measure a type size across the viewport range, see it live, and copy the clamp(). Built for Webflow and plain CSS.">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#0F62FE">
+<meta property="og:title" content="Caliper — fluid type and clamp() generator">
+<meta property="og:description" content="Pick a desktop size, get the mobile size and a clamp() you can paste.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='8'%20fill='%230F62FE'/%3E%3Cpath%20d='M5%2022h5l12-12h5'%20fill='none'%20stroke='%23ffffff'%20stroke-width='3.5'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='7'%20fill='%230F62FE'/%3E%3Cpath%20d='M5%2022h5l12-12h5'%20fill='none'%20stroke='%23ffffff'%20stroke-width='3.5'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#EDF0F4;
+  --surface:#FFFFFF;
+  --surface-2:#F6F8FA;
+  --ink:#0E1116;
+  --ink-2:#3A424E;
+  --muted:#697586;
+  --line:#DCE1E8;
+  --line-2:#EAEDF2;
+  --accent:#0F62FE;
+  --accent-weak:#E7EFFF;
+  --code-bg:#111823;
+  --code-ink:#E6ECF5;
+  --code-num:#8FD3FF;
+  --code-unit:#7FE3C0;
+  --warn:#8A4B0B;
+  --warn-bg:#FFF4E6;
+  --warn-line:#F3D9B4;
+  --r:10px;
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font);
+  font-size:15px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums;
+}
+button,input,select,textarea{font:inherit;color:inherit;font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+/* ---------- shell ---------- */
+.wrap{max-width:1240px;margin:0 auto;padding:22px 20px 64px}
+.topbar{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.mark{flex:0 0 auto;width:36px;height:36px;border-radius:10px;background:var(--accent);display:grid;place-items:center;box-shadow:0 1px 2px rgba(15,98,254,.35)}
+.mark svg{width:21px;height:21px;display:block}
+.brand h1{font-size:19px;line-height:1.2;margin:0;letter-spacing:-.02em;font-weight:650}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.foot{display:flex;align-items:center;gap:9px;margin-top:20px;padding:0 2px;color:var(--muted);font-size:12.5px}
+.foot .dotmark{flex:0 0 auto;width:18px;height:18px;border-radius:5px;background:#C6D2E4;display:grid;place-items:center}
+.foot .dotmark svg{width:12px;height:12px;display:block}
+.foot b{color:var(--ink-2);font-weight:600}
+.tabs{display:flex;gap:2px;background:#E1E6ED;padding:3px;border-radius:9px;margin-left:auto}
+.tabs button{border:0;background:transparent;padding:7px 14px;border-radius:6px;color:var(--ink-2);cursor:pointer;font-size:13.5px;font-weight:550}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(14,17,22,.10)}
+
+.layout{display:grid;grid-template-columns:364px minmax(0,1fr);gap:18px;align-items:start}
+.layout > *{min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);min-width:0}
+@media (max-width:1000px){.layout{grid-template-columns:1fr}}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.side{position:sticky;top:18px}
+@media (max-width:1000px){.side{position:static}}
+.block{padding:16px 18px;border-bottom:1px solid var(--line-2)}
+.block:last-child{border-bottom:0}
+.block h2{margin:0 0 12px;font-size:13px;font-weight:650;letter-spacing:-.005em;color:var(--ink)}
+.block h2 span{font-weight:400;color:var(--muted)}
+
+/* ---------- form ---------- */
+.field{margin-bottom:12px;min-width:0}
+.field:last-child{margin-bottom:0}
+.field > label,.lbl{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px}
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.row > *{min-width:0}
+.ctrl{display:flex;align-items:center;min-width:0;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;overflow:hidden;transition:border-color .12s,background .12s}
+.ctrl:focus-within{border-color:var(--accent);background:#fff}
+.ctrl input{flex:1 1 auto;width:100%;min-width:0;border:0;background:transparent;padding:8px 10px;font-size:14px;font-weight:500}
+.ctrl input:focus{outline:0}
+.ctrl input[readonly]{color:var(--ink-2);cursor:default}
+.ctrl .unit{flex:0 0 auto;padding:0 9px;font-size:11.5px;color:var(--muted);border-left:1px solid var(--line);align-self:stretch;display:flex;align-items:center}
+.seg{display:inline-flex;background:#E7EBF1;border-radius:7px;padding:2px}
+.seg button{border:0;background:transparent;padding:5px 11px;border-radius:5px;cursor:pointer;font-size:12.5px;color:var(--ink-2);font-weight:550}
+.seg button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(14,17,22,.10)}
+select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);font-size:14px;cursor:pointer}
+.check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);cursor:pointer;user-select:none}
+.check input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
+.hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.45}
+
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;background:transparent;cursor:pointer;height:22px}
+input[type=range]::-webkit-slider-runnable-track{height:4px;background:#DFE4EB;border-radius:99px}
+input[type=range]::-moz-range-track{height:4px;background:#DFE4EB;border-radius:99px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 1px 3px rgba(14,17,22,.35);margin-top:-6px}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 1px 3px rgba(14,17,22,.35)}
+
+.inline{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.val{font-size:12.5px;color:var(--ink);font-weight:600}
+
+/* ---------- output ---------- */
+.outhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:11px}
+.fmt{display:flex;gap:2px;background:#E7EBF1;padding:2px;border-radius:7px;flex-wrap:wrap}
+.fmt button{border:0;background:transparent;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:12.5px;color:var(--ink-2);font-weight:550}
+.fmt button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(14,17,22,.10)}
+.code{position:relative;background:var(--code-bg);border-radius:9px;padding:15px 52px 15px 16px}
+.code pre{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.65;color:var(--code-ink);white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}
+.code .n{color:var(--code-num)}
+.code .u{color:var(--code-unit)}
+.code .k{color:#B8A4FF}
+.code .c{color:#7B8798}
+.copy{position:absolute;top:10px;right:10px;border:1px solid #2A3546;background:#1A2432;color:#C9D4E3;border-radius:7px;padding:6px 9px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:5px;transition:background .12s}
+.copy:hover{background:#22304180;background:#233043}
+.copy.done{background:#12331F;border-color:#1F5B34;color:#8AE6AC}
+.btn{border:1px solid var(--line);background:var(--surface-2);color:var(--ink);padding:7px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:550}
+.btn:hover{background:#EEF1F5}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.primary:hover{background:#1C2430}
+
+.note{display:flex;gap:9px;background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--warn);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin-top:12px}
+.note b{font-weight:650}
+
+/* ---------- ruler / chart ---------- */
+.chartwrap{position:relative;margin:2px 0 0}
+.chart{display:block;width:100%;height:168px;overflow:visible}
+.gridline{stroke:var(--line-2);stroke-width:1;vector-effect:non-scaling-stroke}
+.bpline{stroke:#CDD5E0;stroke-width:1;stroke-dasharray:2 3;vector-effect:non-scaling-stroke}
+.curve{fill:none;stroke:var(--accent);stroke-width:2.5;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.curve.dim{stroke:#9AA6B6;stroke-width:1.75}
+.band{fill:var(--accent);opacity:.055}
+.headline{stroke:var(--ink);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.bplabels{position:relative;height:16px;margin-top:2px}
+.bplabels span{position:absolute;transform:translateX(-50%);font-size:10.5px;color:var(--muted);white-space:nowrap}
+.readout{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-top:12px}
+.readout .big{font-size:26px;font-weight:600;letter-spacing:-.02em}
+.readout .sub{font-size:13px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:1px}
+
+/* ---------- preview ---------- */
+.stage{background:var(--surface-2);border:1px solid var(--line);border-radius:9px;overflow:hidden;position:relative}
+.stagebar{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--line);background:#fff;font-size:12px;color:var(--muted)}
+.dots{display:flex;gap:4px;margin-right:4px}
+.dots i{width:8px;height:8px;border-radius:50%;background:#D9DEE6;display:block}
+.stageview{position:relative;overflow:hidden}
+.page{transform-origin:top left;background:#fff;padding:36px 28px}
+.page .h{margin:0 0 .4em;letter-spacing:-.02em;font-weight:640;color:var(--ink);word-break:break-word}
+.page p{margin:0;color:#5A6473;max-width:64ch}
+
+/* ---------- table ---------- */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:11.5px;padding:0 10px 7px 0;border-bottom:1px solid var(--line-2)}
+td{padding:7px 10px 7px 0;border-bottom:1px solid var(--line-2);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.mono{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+.lvl{font-weight:640}
+.mini{width:78px}
+.mini .ctrl input{padding:5px 7px;font-size:13px}
+.iconbtn{border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11.5px;color:var(--ink-2)}
+.iconbtn:hover{background:var(--surface-2)}
+.iconbtn.done{background:#E8F7EE;border-color:#B7E3C7;color:#186A38}
+.scroll{overflow-x:auto}
+.hidden{display:none !important}
+.spacer{height:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32"><path d="M5 22h5l12-12h5" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <div>
+        <h1 data-brand>Caliper</h1>
+        <p>Measure a type size across the viewport range, then copy the clamp().</p>
+      </div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-single" aria-selected="true">Single size</button>
+      <button role="tab" id="tab-scale" aria-selected="false">Type scale</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- ============ CONTROLS ============ -->
+    <div class="panel side">
+      <div class="block">
+        <div class="inline" style="margin-bottom:12px">
+          <h2 style="margin:0">Units</h2>
+          <div class="seg" id="unitSeg">
+            <button data-unit="rem" aria-pressed="true">rem</button>
+            <button data-unit="px" aria-pressed="false">px</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="root">Root font size</label>
+            <div class="ctrl"><input id="root" type="number" step="1" min="1" value="16"><span class="unit">px</span></div>
+          </div>
+          <div class="field">
+            <label for="base">Body size</label>
+            <div class="ctrl"><input id="base" type="number" step="0.05" value="1"><span class="unit" data-u>rem</span></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="vwmin">Viewport min</label>
+            <div class="ctrl"><input id="vwmin" type="number" step="1" value="320"><span class="unit" data-u>px</span></div>
+          </div>
+          <div class="field">
+            <label for="vwmax">Viewport max</label>
+            <div class="ctrl"><input id="vwmax" type="number" step="1" value="1440"><span class="unit" data-u>px</span></div>
+          </div>
+        </div>
+        <label class="check"><input type="checkbox" id="snap" checked> Round sizes to whole pixels</label>
+      </div>
+
+      <!-- single -->
+      <div class="block" data-pane="single">
+        <h2>Size</h2>
+        <div class="field">
+          <label for="maxsize">Desktop size <span style="color:var(--muted)">(at viewport max)</span></label>
+          <div class="ctrl"><input id="maxsize" type="number" step="0.05" value="4"><span class="unit" data-u>rem</span></div>
+        </div>
+        <div class="field">
+          <div class="inline" style="margin-bottom:5px">
+            <label class="lbl" style="margin:0" for="minsize">Mobile size <span>(at viewport min)</span></label>
+            <label class="check" style="font-size:12px"><input type="checkbox" id="automin" checked> Suggest</label>
+          </div>
+          <div class="ctrl"><input id="minsize" type="number" step="0.05" value="2.5"><span class="unit" data-u>rem</span></div>
+        </div>
+        <div class="field" id="shrinkField">
+          <div class="inline"><span class="lbl" style="margin:0">How much it shrinks</span><span class="val" id="shrinkVal">50%</span></div>
+          <input type="range" id="shrink" min="0" max="85" step="5" value="50">
+          <div class="hint" id="shrinkHint"></div>
+        </div>
+      </div>
+
+      <!-- scale -->
+      <div class="block hidden" data-pane="scale">
+        <h2>Scale</h2>
+        <div class="field">
+          <label for="anchor">Build the scale from</label>
+          <select id="anchor">
+            <option value="h1" selected>H1, scaling down</option>
+            <option value="body">Body text, scaling up</option>
+          </select>
+        </div>
+        <div class="field" data-anchor="h1">
+          <label for="h1max">H1 desktop size</label>
+          <div class="ctrl"><input id="h1max" type="number" step="0.05" value="4"><span class="unit" data-u>rem</span></div>
+        </div>
+        <div class="field hidden" data-anchor="body">
+          <label for="bodymax">Body desktop size</label>
+          <div class="ctrl"><input id="bodymax" type="number" step="0.05" value="1.125"><span class="unit" data-u>rem</span></div>
+          <div class="hint">Mobile body comes from the body size above. H1 lands wherever the ratio takes it.</div>
+        </div>
+        <div class="field">
+          <label for="ratiomax">Desktop ratio</label>
+          <select id="ratiomax"></select>
+        </div>
+        <div class="field" data-anchor="h1">
+          <div class="inline" style="margin-bottom:5px">
+            <label class="lbl" style="margin:0" for="h1min">H1 mobile size</label>
+            <label class="check" style="font-size:12px"><input type="checkbox" id="autoh1min" checked> Suggest</label>
+          </div>
+          <div class="ctrl"><input id="h1min" type="number" step="0.05" value="2.5"><span class="unit" data-u>rem</span></div>
+        </div>
+        <div class="field">
+          <label for="ratiomin">Mobile ratio</label>
+          <select id="ratiomin"></select>
+          <div class="hint">A tighter ratio on mobile keeps small headings readable while the H1 comes down hard.</div>
+        </div>
+        <div class="field">
+          <label for="levels">Levels</label>
+          <select id="levels">
+            <option value="6" selected>H1 to H6</option>
+            <option value="5">H1 to H5</option>
+            <option value="4">H1 to H4</option>
+            <option value="3">H1 to H3</option>
+          </select>
+        </div>
+        <label class="check"><input type="checkbox" id="incbody" checked> Include body text row</label>
+      </div>
+
+      <div class="block">
+        <h2>Extras</h2>
+        <label class="check" style="margin-bottom:9px"><input type="checkbox" id="inclh"> Add line-height and letter-spacing</label>
+        <div class="field">
+          <label for="vprefix">Variable names</label>
+          <div class="ctrl"><input id="vprefix" type="text" value="--site--viewport"></div>
+          <div class="hint">Used by the fluid formula as <code>-min</code> and <code>-max</code>.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ RESULTS ============ -->
+    <div>
+      <div class="panel">
+        <div class="block">
+          <div class="outhead">
+            <h2 style="margin:0;flex:1">Output</h2>
+            <div class="fmt" id="fmtSeg"></div>
+          </div>
+          <div class="code">
+            <button class="copy" id="copyMain">Copy</button>
+            <pre id="out"></pre>
+          </div>
+          <div id="warns"></div>
+        </div>
+
+        <div class="block">
+          <h2>Live size across the viewport range</h2>
+          <div class="chartwrap">
+            <svg class="chart" id="chart" preserveAspectRatio="none" viewBox="0 0 1000 168" aria-hidden="true"></svg>
+            <div class="bplabels" id="bplabels"></div>
+          </div>
+          <input type="range" id="simvw" min="280" max="1920" step="1" value="1000" aria-label="Simulated viewport width">
+          <div class="readout" id="readout"></div>
+        </div>
+
+        <div class="block">
+          <div class="outhead">
+            <h2 style="margin:0;flex:1">Preview <span id="simLabel"></span></h2>
+            <div class="seg" id="fitSeg">
+              <button data-fit="1" aria-pressed="true">Scale to fit</button>
+              <button data-fit="0" aria-pressed="false">Actual size</button>
+            </div>
+          </div>
+          <div class="stage">
+            <div class="stagebar"><span class="dots"><i></i><i></i><i></i></span><span id="stageW"></span></div>
+            <div class="stageview" id="stageview"><div class="page" id="page"></div></div>
+          </div>
+          <div class="field" style="margin-top:12px">
+            <label for="sample">Preview text</label>
+            <div class="ctrl"><input id="sample" type="text" value="Type that scales with the screen"></div>
+          </div>
+        </div>
+
+        <div class="block" data-pane="single">
+          <h2>Resolved size at each breakpoint</h2>
+          <div class="scroll"><table id="bptable"></table></div>
+        </div>
+
+        <div class="block hidden" data-pane="scale">
+          <div class="outhead">
+            <h2 style="margin:0;flex:1">Hierarchy <span style="font-weight:400;color:var(--muted)">— edit any value to override</span></h2>
+            <button class="btn" id="resetScale">Reset to ratio</button>
+          </div>
+          <div class="scroll"><table id="scaletable"></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="foot">
+    <span class="dotmark" aria-hidden="true">
+      <svg viewBox="0 0 32 32"><path d="M5 22h5l12-12h5" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+    <span><b data-brand>Caliper</b> · one HTML file, runs offline, nothing leaves your browser.</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---- rename the tool here ---- */
+var BRAND = 'Caliper';
+document.title = BRAND + ' — fluid type and clamp() generator';
+[].forEach.call(document.querySelectorAll('[data-brand]'), function(n){ n.textContent = BRAND; });
+
+/* ---------------- state ---------------- */
+var S = {
+  tab:'single', unit:'rem', root:16, base:1, snap:true,
+  vwMinPx:320, vwMaxPx:1440,
+  maxRem:4, minRem:2.5, autoMin:true, shrink:0.5,
+  h1Max:4, h1Min:2.5, autoH1Min:true, ratioMax:1.25, ratioMin:1.15,
+  anchor:'h1',
+  levels:6, incBody:true, bodyMax:1.125,
+  inclh:false, vprefix:'--site--viewport',
+  fmt:'clamp', simVw:1000, fit:true,
+  sample:'Type that scales with the screen',
+  overrides:{}
+};
+
+var RATIOS = [
+  ['1.067','Minor second 1.067'],['1.125','Major second 1.125'],['1.2','Minor third 1.2'],
+  ['1.25','Major third 1.25'],['1.333','Perfect fourth 1.333'],['1.414','Augmented fourth 1.414'],
+  ['1.5','Perfect fifth 1.5'],['1.618','Golden ratio 1.618']
+];
+var BPS = [375,480,768,992,1280,1440,1920];
+
+/* ---------------- helpers ---------------- */
+function $(id){ return document.getElementById(id); }
+function fmt(n,d){ d = (d===undefined)?4:d; if(!isFinite(n)) return '0'; var p=Math.pow(10,d); return String(Math.round(n*p)/p); }
+function snapRem(r){ if(!S.snap) return Math.round(r*10000)/10000; return Math.round(r*S.root)/S.root; }
+function toDisp(rem){ return S.unit==='px' ? Math.round(rem*S.root*100)/100 : Math.round(rem*10000)/10000; }
+function fromDisp(v){ return S.unit==='px' ? v/S.root : v; }
+function vwDisp(px){ return S.unit==='px' ? Math.round(px) : Math.round(px/S.root*10000)/10000; }
+function vwFrom(v){ return S.unit==='px' ? v : v*S.root; }
+
+function lineHeightFor(r){
+  if(r<1.2) return 1.6; if(r<1.6) return 1.45; if(r<2.2) return 1.3;
+  if(r<3) return 1.2; if(r<4.2) return 1.1; return 1.05;
+}
+function trackingFor(r){
+  if(r<1.5) return 0; if(r<2.5) return -0.01; if(r<4) return -0.02; return -0.03;
+}
+function suggest(maxRem){
+  var v = S.base + (maxRem - S.base) * (1 - S.shrink);
+  return snapRem(Math.max(S.base*0.85, Math.min(v, maxRem)));
+}
+
+/* fluid math: clamp(min, intersect rem + slope*100 vw, max) */
+function calc(minRem,maxRem){
+  var vMin = S.vwMinPx/S.root, vMax = S.vwMaxPx/S.root;
+  var span = (vMax - vMin) || 1;
+  var slope = (maxRem - minRem)/span;
+  var inter = minRem - slope*vMin;
+  return {slope:slope, inter:inter, vw:slope*100};
+}
+function resolve(minRem,maxRem,vwPx){
+  var c = calc(minRem,maxRem);
+  var pref = c.inter + c.slope*(vwPx/S.root);
+  return Math.max(minRem, Math.min(pref, maxRem)); // CSS clamp semantics
+}
+function clampStr(minRem,maxRem){
+  var c = calc(minRem,maxRem);
+  var vw = Math.round(c.vw*1000)/1000;
+  var sign = vw<0 ? ' - ' : ' + ';
+  return 'clamp(' + fmt(minRem) + 'rem, ' + fmt(c.inter) + 'rem' + sign + fmt(Math.abs(vw),3) + 'vw, ' + fmt(maxRem) + 'rem)';
+}
+function formulaStr(minRem,maxRem){
+  var a = fmt(minRem), b = fmt(maxRem);
+  var mn = 'var(' + S.vprefix + '-min)', mx = 'var(' + S.vprefix + '-max)';
+  var d = '(' + b + ' - ' + a + ') / (' + mx + ' - ' + mn + ')';
+  return 'clamp(' + a + ' * 1rem, ((' + a + ' - (' + d + ' * ' + mn + ')) * 1rem + (' + d + ') * 100vw), ' + b + ' * 1rem)';
+}
+function extras(maxRem){
+  if(!S.inclh) return [];
+  var t = trackingFor(maxRem);
+  var out = ['line-height: ' + lineHeightFor(maxRem) + ';'];
+  if(t) out.push('letter-spacing: ' + t + 'em;');
+  return out;
+}
+function rootVars(){
+  return [S.vprefix + '-min: ' + fmt(S.vwMinPx/S.root) + ';', S.vprefix + '-max: ' + fmt(S.vwMaxPx/S.root) + ';'];
+}
+
+/* ---------------- rows ---------------- */
+function scaleRows(){
+  var rows = [], i, key, topMax, topMin;
+  if(S.anchor==='body'){
+    topMax = S.bodyMax * Math.pow(S.ratioMax, S.levels);
+    topMin = S.base * Math.pow(S.ratioMin, S.levels);
+  } else {
+    topMax = S.h1Max; topMin = S.h1Min;
+  }
+  for(i=1;i<=S.levels;i++){
+    key = 'h'+i;
+    var mx = snapRem(topMax / Math.pow(S.ratioMax, i-1));
+    var mn = snapRem(topMin / Math.pow(S.ratioMin, i-1));
+    var o = S.overrides[key];
+    rows.push({key:key, label:'H'+i, min:o&&o.min!=null?o.min:mn, max:o&&o.max!=null?o.max:mx});
+  }
+  if(S.incBody){
+    var ob = S.overrides.body;
+    rows.push({key:'body', label:'Body', min:ob&&ob.min!=null?ob.min:snapRem(S.base), max:ob&&ob.max!=null?ob.max:snapRem(S.bodyMax)});
+  }
+  return rows;
+}
+function currentRows(){
+  return S.tab==='single' ? [{key:'font-size', label:'Size', min:S.minRem, max:S.maxRem}] : scaleRows();
+}
+
+/* ---------------- output ---------------- */
+var FORMATS = {
+  single:[['clamp','clamp()'],['decl','Declaration'],['formula','Fluid formula'],['variable','CSS variable']],
+  scale:[['clamp','clamp()'],['formula','Fluid formula'],['variable','CSS variables'],['rules','CSS rules']]
+};
+function buildOutput(){
+  var rows = currentRows(), f = S.fmt, L = [];
+  var body = function(r){ return f==='formula' ? formulaStr(r.min,r.max) : clampStr(r.min,r.max); };
+
+  if(S.tab==='single'){
+    var r = rows[0];
+    if(f==='clamp' || f==='formula'){
+      L.push(body(r));
+      if(S.inclh){ L.push(''); L.push('/* line-height: ' + lineHeightFor(r.max) + ' */'); }
+    } else if(f==='decl'){
+      L.push('font-size: ' + clampStr(r.min,r.max) + ';');
+      extras(r.max).forEach(function(x){ L.push(x); });
+    } else {
+      L.push(':root {');
+      rootVars().forEach(function(v){ L.push('  ' + v); });
+      L.push('  --font-size--h1: ' + formulaStr(r.min,r.max) + ';');
+      L.push('}');
+    }
+    return L.join('\n');
+  }
+
+  if(f==='clamp' || f==='formula'){
+    rows.forEach(function(r){ L.push('/* ' + r.label + ' */'); L.push(body(r)); L.push(''); });
+    return L.join('\n').trim();
+  }
+  if(f==='variable'){
+    L.push(':root {');
+    rootVars().forEach(function(v){ L.push('  ' + v); });
+    L.push('');
+    rows.forEach(function(r){ L.push('  --font-size--' + r.key + ': ' + formulaStr(r.min,r.max) + ';'); });
+    L.push('}');
+    return L.join('\n');
+  }
+  rows.forEach(function(r){
+    var sel = r.key==='body' ? 'body, p' : (r.key + ', .' + r.key);
+    L.push(sel + ' {');
+    L.push('  font-size: ' + clampStr(r.min,r.max) + ';');
+    extras(r.max).forEach(function(x){ L.push('  ' + x); });
+    L.push('}');
+    L.push('');
+  });
+  return L.join('\n').trim();
+}
+function highlight(t){
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/(\/\*[^*]*\*\/)/g,'<span class="c">$1</span>')
+    .replace(/\b(clamp|var|calc)\b(?![^<]*<\/span>)/g,'<span class="k">$1</span>')
+    .replace(/(-?\d*\.?\d+)(rem|vw|px|em)\b/g,'<span class="n">$1</span><span class="u">$2</span>');
+}
+
+/* ---------------- warnings ---------------- */
+function warnings(){
+  var w = [], rows = currentRows();
+  if(S.vwMinPx >= S.vwMaxPx) w.push(['Viewport range is inverted','Viewport min must be smaller than viewport max, or the maths breaks down.']);
+  var inverted = rows.filter(function(r){ return r.min > r.max; });
+  if(inverted.length) w.push(['Mobile size is larger than desktop','' + inverted.map(function(r){return r.label;}).join(', ') + ' shrinks as the screen gets wider. CSS will lock it to the mobile value. Fine if intentional.']);
+  var zoomRisk = rows.filter(function(r){ return calc(r.min,r.max).inter <= 0 && r.min !== r.max; });
+  if(zoomRisk.length) w.push(['May not survive browser zoom','The rem part of ' + zoomRisk.map(function(r){return r.label;}).join(', ') + ' is zero or negative, so text can stop growing at 200% zoom (WCAG 1.4.4). Raise the mobile size or narrow the viewport range.']);
+  return w;
+}
+
+/* ---------------- chart ---------------- */
+function series(){
+  var rows = currentRows();
+  if(S.tab==='single') return [{min:rows[0].min,max:rows[0].max,dim:false,label:'Size'}];
+  return rows.map(function(r,i){ return {min:r.min,max:r.max,dim:i>0,label:r.label}; });
+}
+function drawChart(){
+  var svg = $('chart'), W=1000, H=168, padT=12, padB=16;
+  var s = series();
+  var loPx = Math.max(200, S.vwMinPx*0.72), hiPx = S.vwMaxPx*1.18;
+  if(!(hiPx > loPx)) hiPx = loPx + 100;
+  var top = 0; s.forEach(function(x){ top = Math.max(top, x.max, x.min); });
+  top = top*1.12 || 1;
+  var x = function(px){ return (px-loPx)/(hiPx-loPx)*W; };
+  var y = function(rem){ return H-padB - (rem/top)*(H-padT-padB); };
+  var parts = [];
+
+  parts.push('<line class="gridline" x1="0" y1="'+(H-padB)+'" x2="'+W+'" y2="'+(H-padB)+'"/>');
+  parts.push('<rect class="band" x="'+x(S.vwMinPx)+'" y="0" width="'+(x(S.vwMaxPx)-x(S.vwMinPx))+'" height="'+(H-padB)+'"/>');
+  BPS.forEach(function(bp){ if(bp>loPx && bp<hiPx) parts.push('<line class="bpline" x1="'+x(bp)+'" y1="0" x2="'+x(bp)+'" y2="'+(H-padB)+'"/>'); });
+
+  s.forEach(function(item){
+    var d = 'M '+x(loPx)+' '+y(item.min)+' L '+x(S.vwMinPx)+' '+y(item.min)+' L '+x(S.vwMaxPx)+' '+y(item.max)+' L '+x(hiPx)+' '+y(item.max);
+    parts.push('<path class="curve'+(item.dim?' dim':'')+'" d="'+d+'"/>');
+  });
+  parts.push('<line class="headline" x1="'+x(S.simVw)+'" y1="0" x2="'+x(S.simVw)+'" y2="'+(H-padB)+'"/>');
+  s.forEach(function(item){
+    var r = resolve(item.min,item.max,S.simVw);
+    parts.push('<circle cx="'+x(S.simVw)+'" cy="'+y(r)+'" r="4" fill="'+(item.dim?'#9AA6B6':'#0F62FE')+'" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"/>');
+  });
+  svg.innerHTML = parts.join('');
+
+  var lab = [];
+  BPS.forEach(function(bp){ if(bp>loPx && bp<hiPx) lab.push('<span style="left:'+((bp-loPx)/(hiPx-loPx)*100)+'%">'+bp+'</span>'); });
+  $('bplabels').innerHTML = lab.join('');
+}
+
+/* ---------------- preview ---------------- */
+function drawPreview(){
+  var page = $('page'), view = $('stageview'), rows = currentRows();
+  var html = '';
+  rows.forEach(function(r){
+    if(r.key==='body') return;
+    var px = resolve(r.min,r.max,S.simVw)*S.root;
+    html += '<div class="h" style="font-size:'+px+'px;line-height:'+lineHeightFor(r.max)+';letter-spacing:'+trackingFor(r.max)+'em">'+
+            (rows.length>1 ? r.label+' — '+esc(S.sample) : esc(S.sample))+'</div>';
+  });
+  var bodyRow = rows.filter(function(r){return r.key==='body';})[0];
+  var bpx = bodyRow ? resolve(bodyRow.min,bodyRow.max,S.simVw)*S.root : 16;
+  html += '<p style="font-size:'+bpx+'px;line-height:1.6">Body copy sits underneath so you can judge the jump between the heading and the text around it. Drag the slider above to move through the viewport range.</p>';
+  page.innerHTML = html;
+  page.style.width = S.simVw + 'px';
+  var avail = view.clientWidth || 600;
+  var k = S.fit ? Math.min(1, avail/S.simVw) : 1;
+  page.style.transform = 'scale('+k+')';
+  view.style.overflowX = (k<1 || S.simVw<=avail) ? 'hidden' : 'auto';
+  requestAnimationFrame(function(){ view.style.height = (page.scrollHeight*k)+'px'; });
+  $('stageW').textContent = S.simVw + ' px viewport' + (k<1 ? '  ·  shown at ' + Math.round(k*100) + '%' : '');
+}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+/* ---------------- tables ---------------- */
+function drawBpTable(){
+  var h = '<thead><tr><th>Viewport</th><th>Size in px</th><th>Size in rem</th><th></th></tr></thead><tbody>';
+  BPS.forEach(function(bp){
+    var r = resolve(S.minRem,S.maxRem,bp);
+    var atMin = r<=S.minRem+1e-9, atMax = r>=S.maxRem-1e-9;
+    var tag = atMin ? 'locked to mobile' : (atMax ? 'locked to desktop' : 'fluid');
+    h += '<tr><td>'+bp+'px</td><td class="mono">'+fmt(r*S.root,1)+'px</td><td class="mono">'+fmt(r,3)+'rem</td><td style="color:var(--muted);font-size:12px">'+tag+'</td></tr>';
+  });
+  $('bptable').innerHTML = h + '</tbody>';
+}
+function drawScaleTable(){
+  var rows = scaleRows();
+  var u = S.unit;
+  var h = '<thead><tr><th>Level</th><th>Mobile</th><th>Desktop</th><th>At '+S.simVw+'px</th><th>clamp()</th><th></th></tr></thead><tbody>';
+  rows.forEach(function(r){
+    var res = resolve(r.min,r.max,S.simVw);
+    h += '<tr>'+
+      '<td class="lvl">'+r.label+'</td>'+
+      '<td><div class="ctrl mini"><input type="number" step="0.05" data-row="'+r.key+'" data-side="min" value="'+toDisp(r.min)+'"><span class="unit" data-u>'+u+'</span></div></td>'+
+      '<td><div class="ctrl mini"><input type="number" step="0.05" data-row="'+r.key+'" data-side="max" value="'+toDisp(r.max)+'"><span class="unit" data-u>'+u+'</span></div></td>'+
+      '<td class="mono">'+fmt(res*S.root,1)+'px</td>'+
+      '<td class="mono" style="max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+clampStr(r.min,r.max)+'</td>'+
+      '<td><button class="iconbtn" data-copyrow="'+r.key+'">Copy</button></td>'+
+    '</tr>';
+  });
+  $('scaletable').innerHTML = h + '</tbody>';
+}
+
+/* ---------------- render ---------------- */
+function drawFormats(){
+  var list = FORMATS[S.tab];
+  if(!list.some(function(f){return f[0]===S.fmt;})) S.fmt = list[0][0];
+  $('fmtSeg').innerHTML = list.map(function(f){
+    return '<button data-fmt="'+f[0]+'" aria-pressed="'+(S.fmt===f[0])+'">'+f[1]+'</button>';
+  }).join('');
+}
+function render(){
+  if(S.autoMin) S.minRem = suggest(S.maxRem);
+  if(S.autoH1Min) S.h1Min = suggest(S.h1Max);
+
+  drawFormats();
+  var txt = buildOutput();
+  $('out').innerHTML = highlight(txt);
+  $('out').dataset.raw = txt;
+
+  var w = warnings();
+  $('warns').innerHTML = w.map(function(x){
+    return '<div class="note"><span>&#9888;</span><span><b>'+x[0]+'.</b> '+x[1]+'</span></div>';
+  }).join('');
+
+  // readout
+  var rows = currentRows(), main = rows[0];
+  var res = resolve(main.min,main.max,S.simVw);
+  var state = res<=main.min+1e-9 ? 'at the mobile floor' : (res>=main.max-1e-9 ? 'at the desktop ceiling' : 'scaling');
+  $('readout').innerHTML =
+    '<span class="big"><span class="dot" style="background:var(--accent)"></span>'+fmt(res*S.root,1)+'px</span>'+
+    '<span class="sub">'+fmt(res,3)+'rem &nbsp;·&nbsp; '+(rows.length>1?main.label+' ':'')+state+' at '+S.simVw+'px wide</span>';
+  $('simLabel').innerHTML = '<span style="font-weight:400;color:var(--muted)">— '+S.simVw+'px</span>';
+
+  drawChart();
+  drawPreview();
+  if(S.tab==='single') drawBpTable(); else drawScaleTable();
+
+  // sync inputs (never fight the field the user is typing in)
+  if(S.autoMin || document.activeElement !== $('minsize')) $('minsize').value = toDisp(S.minRem);
+  if(S.autoH1Min || document.activeElement !== $('h1min')) $('h1min').value = toDisp(S.h1Min);
+  $('minsize').readOnly = S.autoMin;
+  $('h1min').readOnly = S.autoH1Min;
+  $('shrinkVal').textContent = Math.round(S.shrink*100)+'%';
+  $('shrinkHint').textContent = 'A ' + toDisp(S.maxRem) + (S.unit==='px'?'px':'rem') + ' heading becomes ' + toDisp(suggest(S.maxRem)) + (S.unit==='px'?'px':'rem') + ' on mobile.';
+  $('shrinkField').style.display = S.autoMin ? '' : 'none';
+}
+
+/* ---------------- wiring ---------------- */
+function num(el,fallback){ var v = parseFloat(el.value); return isFinite(v) ? v : fallback; }
+
+function syncUnitLabels(){
+  var l = S.unit;
+  [].forEach.call(document.querySelectorAll('[data-u]'), function(n){ n.textContent = l; });
+  $('vwmin').value = vwDisp(S.vwMinPx);
+  $('vwmax').value = vwDisp(S.vwMaxPx);
+  $('maxsize').value = toDisp(S.maxRem);
+  $('minsize').value = toDisp(S.minRem);
+  $('h1max').value = toDisp(S.h1Max);
+  $('h1min').value = toDisp(S.h1Min);
+  $('base').value = toDisp(S.base);
+  $('bodymax').value = toDisp(S.bodyMax);
+  var step = S.unit==='px' ? 1 : 0.05;
+  ['maxsize','minsize','h1max','h1min','base','bodymax'].forEach(function(id){ $(id).step = step; });
+}
+
+RATIOS.forEach(function(r){
+  var a = document.createElement('option'); a.value=r[0]; a.textContent=r[1];
+  if(r[0]==='1.25') a.selected=true; $('ratiomax').appendChild(a);
+  var b = document.createElement('option'); b.value=r[0]; b.textContent=r[1];
+  if(r[0]==='1.125') b.selected=true; $('ratiomin').appendChild(b);
+});
+S.ratioMin = 1.125;
+
+$('unitSeg').addEventListener('click', function(e){
+  var b = e.target.closest('button'); if(!b) return;
+  S.unit = b.dataset.unit;
+  [].forEach.call(this.children, function(c){ c.setAttribute('aria-pressed', String(c===b)); });
+  syncUnitLabels(); render();
+});
+$('fitSeg').addEventListener('click', function(e){
+  var b = e.target.closest('button'); if(!b) return;
+  S.fit = b.dataset.fit === '1';
+  [].forEach.call(this.children, function(c){ c.setAttribute('aria-pressed', String(c===b)); });
+  drawPreview();
+});
+$('fmtSeg').addEventListener('click', function(e){
+  var b = e.target.closest('button'); if(!b) return;
+  S.fmt = b.dataset.fmt; render();
+});
+
+function setTab(t){
+  S.tab = t;
+  $('tab-single').setAttribute('aria-selected', String(t==='single'));
+  $('tab-scale').setAttribute('aria-selected', String(t==='scale'));
+  [].forEach.call(document.querySelectorAll('[data-pane]'), function(n){
+    n.classList.toggle('hidden', n.dataset.pane !== t);
+  });
+  render();
+}
+$('tab-single').addEventListener('click', function(){ setTab('single'); });
+$('tab-scale').addEventListener('click', function(){ setTab('scale'); });
+
+var binds = [
+  ['root', function(v){ S.root = Math.max(1, v||16); syncUnitLabels(); }],
+  ['base', function(v){ S.base = fromDisp(v); }],
+  ['vwmin', function(v){ S.vwMinPx = vwFrom(v); updateSlider(); }],
+  ['vwmax', function(v){ S.vwMaxPx = vwFrom(v); updateSlider(); }],
+  ['maxsize', function(v){ S.maxRem = fromDisp(v); }],
+  ['minsize', function(v){ if(!S.autoMin) S.minRem = fromDisp(v); }],
+  ['h1max', function(v){ S.h1Max = fromDisp(v); S.overrides = {}; }],
+  ['h1min', function(v){ if(!S.autoH1Min){ S.h1Min = fromDisp(v); S.overrides = {}; } }]
+];
+binds.forEach(function(b){
+  $(b[0]).addEventListener('input', function(){ b[1](num(this, 0)); render(); });
+});
+
+$('snap').addEventListener('change', function(){ S.snap = this.checked; render(); });
+$('inclh').addEventListener('change', function(){ S.inclh = this.checked; render(); });
+$('incbody').addEventListener('change', function(){ S.incBody = this.checked; render(); });
+$('automin').addEventListener('change', function(){ S.autoMin = this.checked; render(); if(!this.checked) $('minsize').focus(); });
+$('autoh1min').addEventListener('change', function(){ S.autoH1Min = this.checked; render(); });
+$('shrink').addEventListener('input', function(){ S.shrink = parseInt(this.value,10)/100; render(); });
+$('anchor').addEventListener('change', function(){
+  S.anchor = this.value; S.overrides = {};
+  [].forEach.call(document.querySelectorAll('[data-anchor]'), function(n){
+    n.classList.toggle('hidden', n.dataset.anchor !== S.anchor);
+  });
+  render();
+});
+$('bodymax').addEventListener('input', function(){
+  var v = parseFloat(this.value); if(isFinite(v)){ S.bodyMax = fromDisp(v); S.overrides = {}; render(); }
+});
+$('levels').addEventListener('change', function(){ S.levels = parseInt(this.value,10); render(); });
+$('ratiomax').addEventListener('change', function(){ S.ratioMax = parseFloat(this.value); S.overrides = {}; render(); });
+$('ratiomin').addEventListener('change', function(){ S.ratioMin = parseFloat(this.value); S.overrides = {}; render(); });
+$('vprefix').addEventListener('input', function(){ S.vprefix = this.value.trim() || '--site--viewport'; render(); });
+$('sample').addEventListener('input', function(){ S.sample = this.value; drawPreview(); });
+$('resetScale').addEventListener('click', function(){ S.overrides = {}; render(); });
+
+function updateSlider(){
+  var lo = Math.max(200, Math.round(S.vwMinPx*0.72)), hi = Math.round(S.vwMaxPx*1.18);
+  var sl = $('simvw');
+  sl.min = lo; sl.max = hi;
+  S.simVw = Math.min(hi, Math.max(lo, S.simVw));
+  sl.value = S.simVw;
+}
+$('simvw').addEventListener('input', function(){ S.simVw = parseInt(this.value,10); render(); });
+
+$('chart').addEventListener('pointerdown', function(e){
+  var rect = this.getBoundingClientRect();
+  var lo = parseInt($('simvw').min,10), hi = parseInt($('simvw').max,10);
+  var t = Math.min(1, Math.max(0, (e.clientX-rect.left)/rect.width));
+  S.simVw = Math.round(lo + t*(hi-lo));
+  $('simvw').value = S.simVw; render();
+});
+
+document.addEventListener('input', function(e){
+  var el = e.target;
+  if(!el.dataset || !el.dataset.row) return;
+  var v = parseFloat(el.value); if(!isFinite(v)) return;
+  var k = el.dataset.row;
+  S.overrides[k] = S.overrides[k] || {};
+  S.overrides[k][el.dataset.side] = fromDisp(v);
+  var txt = buildOutput();
+  $('out').innerHTML = highlight(txt); $('out').dataset.raw = txt;
+  drawChart(); drawPreview();
+});
+
+/* copy */
+function copyText(t, btn, label){
+  var done = function(){
+    var old = btn.textContent; btn.textContent = 'Copied'; btn.classList.add('done');
+    setTimeout(function(){ btn.textContent = old || label; btn.classList.remove('done'); }, 1400);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(done, function(){ fallback(t); done(); });
+  } else { fallback(t); done(); }
+}
+function fallback(t){
+  var ta = document.createElement('textarea');
+  ta.value = t; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.top='-1000px';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); }catch(err){}
+  document.body.removeChild(ta);
+}
+$('copyMain').addEventListener('click', function(){ copyText($('out').dataset.raw || '', this, 'Copy'); });
+document.addEventListener('click', function(e){
+  var b = e.target.closest('[data-copyrow]'); if(!b) return;
+  var rows = scaleRows(), key = b.dataset.copyrow;
+  var r = rows.filter(function(x){ return x.key===key; })[0]; if(!r) return;
+  copyText(S.fmt==='formula' ? formulaStr(r.min,r.max) : clampStr(r.min,r.max), b, 'Copy');
+});
+
+document.addEventListener('change', function(e){
+  if(e.target.dataset && e.target.dataset.row) render();
+});
+window.addEventListener('resize', function(){ drawPreview(); });
+
+/* init */
+syncUnitLabels();
+updateSlider();
+S.simVw = 1000; $('simvw').value = 1000;
+render();
+})();
+</script>
+</body>
+</html>
