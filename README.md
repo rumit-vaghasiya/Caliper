@@ -147,15 +147,6 @@ The fluid formula divides by a `var()`. Browsers resolve that at computed value 
 
 Keyboard accessible throughout, with visible focus rings. Respects `prefers-reduced-motion`.
 
-## Not built yet
-
-Ideas worth adding:
-
-- Saved presets, so your standard viewport range loads on open
-- A spacing scale on the same maths, since fluid padding has the same problem
-- Paste an existing `clamp()` and have it reverse engineer the min, max, and viewport range
-- A column for your own variable names so the CSS block matches project naming
-
 ## License
 
-MIT. Copyright (c) 2026 Rumit Vaghasiya.
+Copyright (c) 2026 Rumit Vaghasiya.
