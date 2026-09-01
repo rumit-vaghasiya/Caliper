@@ -2,21 +2,6 @@
 
 Fluid type sizing for CSS and Webflow. Pick a desktop size, get a sensible mobile size, see how it behaves across the whole viewport range, and copy the `clamp()`.
 
-One HTML file. No build step, no dependencies, no network calls. Open it in a browser and it works, including offline.
-
-<!-- Drop a screenshot here as screenshot.png and uncomment:
-![Caliper](screenshot.png)
--->
-
-## Quick start
-
-1. Download `caliper.html`.
-2. Open it in any browser, or drag it onto a browser tab.
-3. Set your viewport range once (defaults are 320px to 1440px).
-4. Type a desktop size. Copy the output.
-
-To keep it handy, bookmark the local file or drop it on a static host.
-
 ## Two modes
 
 ### Single size
