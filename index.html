@@ -161,9 +161,18 @@ th{text-align:left;font-weight:600;color:var(--muted);font-size:11.5px;padding:0
 td{padding:7px 10px 7px 0;border-bottom:1px solid var(--line-2);vertical-align:middle}
 tr:last-child td{border-bottom:0}
 td.mono{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
-.lvl{font-weight:640}
-.mini{width:78px}
-.mini .ctrl input{padding:5px 7px;font-size:13px}
+.lvl{font-weight:640;white-space:nowrap}
+#scaletable{min-width:680px}
+#scaletable th{white-space:nowrap}
+.numcell{width:96px}
+.ctrl.mini{width:96px}
+.ctrl.mini input{padding:6px 9px;font-size:13.5px;font-weight:550;text-align:left}
+.ctrl.mini input::-webkit-outer-spin-button,
+.ctrl.mini input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.ctrl.mini input[type=number]{-moz-appearance:textfield;appearance:textfield}
+.clampcell{max-width:270px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+tr.cross td{background:#FFFAF2}
+.flag{display:inline-block;margin-left:7px;font-size:10px;font-weight:650;color:var(--warn);background:#FFEFD9;border:1px solid var(--warn-line);border-radius:5px;padding:1px 5px;letter-spacing:.01em}
 .iconbtn{border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11.5px;color:var(--ink-2)}
 .iconbtn:hover{background:var(--surface-2)}
 .iconbtn.done{background:#E8F7EE;border-color:#B7E3C7;color:#186A38}
@@ -240,11 +249,6 @@ td.mono{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
           </div>
           <div class="ctrl"><input id="minsize" type="number" step="0.05" value="2.5"><span class="unit" data-u>rem</span></div>
         </div>
-        <div class="field" id="shrinkField">
-          <div class="inline"><span class="lbl" style="margin:0">How much it shrinks</span><span class="val" id="shrinkVal">50%</span></div>
-          <input type="range" id="shrink" min="0" max="85" step="5" value="50">
-          <div class="hint" id="shrinkHint"></div>
-        </div>
       </div>
 
       <!-- scale -->
@@ -270,17 +274,24 @@ td.mono{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
           <label for="ratiomax">Desktop ratio</label>
           <select id="ratiomax"></select>
         </div>
-        <div class="field" data-anchor="h1">
+        <div class="field">
+          <label for="mobilemode">Mobile sizes from</label>
+          <select id="mobilemode">
+            <option value="shrink" selected>Shrinking each level</option>
+            <option value="ratio">Their own ratio</option>
+          </select>
+          <div class="hint" id="mobileHint"></div>
+        </div>
+        <div class="field hidden" data-anchor="h1" data-mmode="ratio">
           <div class="inline" style="margin-bottom:5px">
             <label class="lbl" style="margin:0" for="h1min">H1 mobile size</label>
             <label class="check" style="font-size:12px"><input type="checkbox" id="autoh1min" checked> Suggest</label>
           </div>
           <div class="ctrl"><input id="h1min" type="number" step="0.05" value="2.5"><span class="unit" data-u>rem</span></div>
         </div>
-        <div class="field">
+        <div class="field hidden" data-mmode="ratio">
           <label for="ratiomin">Mobile ratio</label>
           <select id="ratiomin"></select>
-          <div class="hint">A tighter ratio on mobile keeps small headings readable while the H1 comes down hard.</div>
         </div>
         <div class="field">
           <label for="levels">Levels</label>
@@ -292,6 +303,12 @@ td.mono{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
           </select>
         </div>
         <label class="check"><input type="checkbox" id="incbody" checked> Include body text row</label>
+      </div>
+
+      <div class="block" id="shrinkBlock">
+        <div class="inline"><span class="lbl" style="margin:0">How much mobile shrinks</span><span class="val" id="shrinkVal">50%</span></div>
+        <input type="range" id="shrink" min="0" max="85" step="5" value="50">
+        <div class="hint" id="shrinkHint"></div>
       </div>
 
       <div class="block">
@@ -368,7 +385,7 @@ td.mono{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
     <span class="dotmark" aria-hidden="true">
       <svg viewBox="0 0 32 32"><path d="M5 22h5l12-12h5" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </span>
-    <span><b data-brand>Caliper</b> · one HTML file, runs offline, nothing leaves your browser.</span>
+    <span><b data-brand>Caliper</b> <span data-version>v2.0</span> · one HTML file, runs offline, nothing leaves your browser.</span>
   </footer>
 </div>
 
@@ -378,8 +395,10 @@ td.mono{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
 
 /* ---- rename the tool here ---- */
 var BRAND = 'Caliper';
+var VERSION = '2.0';
 document.title = BRAND + ' — fluid type and clamp() generator';
 [].forEach.call(document.querySelectorAll('[data-brand]'), function(n){ n.textContent = BRAND; });
+[].forEach.call(document.querySelectorAll('[data-version]'), function(n){ n.textContent = 'v' + VERSION; });
 
 /* ---------------- state ---------------- */
 var S = {
@@ -387,7 +406,7 @@ var S = {
   vwMinPx:320, vwMaxPx:1440,
   maxRem:4, minRem:2.5, autoMin:true, shrink:0.5,
   h1Max:4, h1Min:2.5, autoH1Min:true, ratioMax:1.25, ratioMin:1.15,
-  anchor:'h1',
+  anchor:'h1', mobileMode:'shrink',
   levels:6, incBody:true, bodyMax:1.125,
   inclh:false, vprefix:'--site--viewport',
   fmt:'clamp', simVw:1000, fit:true,
@@ -461,19 +480,21 @@ function rootVars(){
 
 /* ---------------- rows ---------------- */
 function scaleRows(){
-  var rows = [], i, key, topMax, topMin;
-  if(S.anchor==='body'){
-    topMax = S.bodyMax * Math.pow(S.ratioMax, S.levels);
-    topMin = S.base * Math.pow(S.ratioMin, S.levels);
+  var rows = [], i, key, topMax, topMin, maxes = [], mins = [];
+  topMax = S.anchor==='body' ? S.bodyMax * Math.pow(S.ratioMax, S.levels) : S.h1Max;
+  for(i=1;i<=S.levels;i++) maxes.push(snapRem(topMax / Math.pow(S.ratioMax, i-1)));
+
+  if(S.mobileMode==='shrink'){
+    maxes.forEach(function(m){ mins.push(suggest(m)); });
   } else {
-    topMax = S.h1Max; topMin = S.h1Min;
+    topMin = S.anchor==='body' ? S.base * Math.pow(S.ratioMin, S.levels) : S.h1Min;
+    for(i=1;i<=S.levels;i++) mins.push(snapRem(topMin / Math.pow(S.ratioMin, i-1)));
   }
+
   for(i=1;i<=S.levels;i++){
     key = 'h'+i;
-    var mx = snapRem(topMax / Math.pow(S.ratioMax, i-1));
-    var mn = snapRem(topMin / Math.pow(S.ratioMin, i-1));
     var o = S.overrides[key];
-    rows.push({key:key, label:'H'+i, min:o&&o.min!=null?o.min:mn, max:o&&o.max!=null?o.max:mx});
+    rows.push({key:key, label:'H'+i, min:o&&o.min!=null?o.min:mins[i-1], max:o&&o.max!=null?o.max:maxes[i-1]});
   }
   if(S.incBody){
     var ob = S.overrides.body;
@@ -624,17 +645,18 @@ function drawBpTable(){
   $('bptable').innerHTML = h + '</tbody>';
 }
 function drawScaleTable(){
-  var rows = scaleRows();
-  var u = S.unit;
-  var h = '<thead><tr><th>Level</th><th>Mobile</th><th>Desktop</th><th>At '+S.simVw+'px</th><th>clamp()</th><th></th></tr></thead><tbody>';
+  var rows = scaleRows(), u = S.unit, step = (u==='px' ? 1 : 0.05);
+  var h = '<thead><tr><th>Level</th><th>Mobile ('+u+')</th><th>Desktop ('+u+')</th><th>At '+S.simVw+'px</th><th>clamp()</th><th></th></tr></thead><tbody>';
   rows.forEach(function(r){
     var res = resolve(r.min,r.max,S.simVw);
-    h += '<tr>'+
-      '<td class="lvl">'+r.label+'</td>'+
-      '<td><div class="ctrl mini"><input type="number" step="0.05" data-row="'+r.key+'" data-side="min" value="'+toDisp(r.min)+'"><span class="unit" data-u>'+u+'</span></div></td>'+
-      '<td><div class="ctrl mini"><input type="number" step="0.05" data-row="'+r.key+'" data-side="max" value="'+toDisp(r.max)+'"><span class="unit" data-u>'+u+'</span></div></td>'+
+    var cross = r.min > r.max;
+    var cs = clampStr(r.min,r.max);
+    h += '<tr'+(cross?' class="cross"':'')+'>'+
+      '<td class="lvl">'+r.label+(cross?'<span class="flag" title="Mobile is larger than desktop, so this level shrinks as the screen grows">inverted</span>':'')+'</td>'+
+      '<td class="numcell"><div class="ctrl mini"><input type="number" step="'+step+'" data-row="'+r.key+'" data-side="min" value="'+toDisp(r.min)+'" aria-label="'+r.label+' mobile size"></div></td>'+
+      '<td class="numcell"><div class="ctrl mini"><input type="number" step="'+step+'" data-row="'+r.key+'" data-side="max" value="'+toDisp(r.max)+'" aria-label="'+r.label+' desktop size"></div></td>'+
       '<td class="mono">'+fmt(res*S.root,1)+'px</td>'+
-      '<td class="mono" style="max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+clampStr(r.min,r.max)+'</td>'+
+      '<td class="mono clampcell" title="'+cs+'">'+cs+'</td>'+
       '<td><button class="iconbtn" data-copyrow="'+r.key+'">Copy</button></td>'+
     '</tr>';
   });
@@ -682,8 +704,15 @@ function render(){
   $('minsize').readOnly = S.autoMin;
   $('h1min').readOnly = S.autoH1Min;
   $('shrinkVal').textContent = Math.round(S.shrink*100)+'%';
-  $('shrinkHint').textContent = 'A ' + toDisp(S.maxRem) + (S.unit==='px'?'px':'rem') + ' heading becomes ' + toDisp(suggest(S.maxRem)) + (S.unit==='px'?'px':'rem') + ' on mobile.';
-  $('shrinkField').style.display = S.autoMin ? '' : 'none';
+  var un = S.unit==='px' ? 'px' : 'rem';
+  var showShrink = (S.tab==='single' && S.autoMin) || (S.tab==='scale' && S.mobileMode==='shrink');
+  $('shrinkBlock').classList.toggle('hidden', !showShrink);
+  $('shrinkHint').textContent = S.tab==='scale'
+    ? 'Every level is pulled toward your body size by this much. Body size itself never moves.'
+    : 'A ' + toDisp(S.maxRem) + un + ' heading becomes ' + toDisp(suggest(S.maxRem)) + un + ' on mobile.';
+  $('mobileHint').textContent = S.mobileMode==='shrink'
+    ? 'Each mobile size comes from its own desktop size, so levels can never cross over.'
+    : 'Full control. Watch the bottom of the scale: a tighter mobile ratio can push small levels above their desktop size.';
 }
 
 /* ---------------- wiring ---------------- */
@@ -761,12 +790,21 @@ $('incbody').addEventListener('change', function(){ S.incBody = this.checked; re
 $('automin').addEventListener('change', function(){ S.autoMin = this.checked; render(); if(!this.checked) $('minsize').focus(); });
 $('autoh1min').addEventListener('change', function(){ S.autoH1Min = this.checked; render(); });
 $('shrink').addEventListener('input', function(){ S.shrink = parseInt(this.value,10)/100; render(); });
+function syncPanes(){
+  [].forEach.call(document.querySelectorAll('[data-anchor],[data-mmode]'), function(n){
+    var ok = true;
+    if(n.dataset.anchor && n.dataset.anchor !== S.anchor) ok = false;
+    if(n.dataset.mmode && n.dataset.mmode !== S.mobileMode) ok = false;
+    n.classList.toggle('hidden', !ok);
+  });
+}
 $('anchor').addEventListener('change', function(){
   S.anchor = this.value; S.overrides = {};
-  [].forEach.call(document.querySelectorAll('[data-anchor]'), function(n){
-    n.classList.toggle('hidden', n.dataset.anchor !== S.anchor);
-  });
-  render();
+  syncPanes(); render();
+});
+$('mobilemode').addEventListener('change', function(){
+  S.mobileMode = this.value; S.overrides = {};
+  syncPanes(); render();
 });
 $('bodymax').addEventListener('input', function(){
   var v = parseFloat(this.value); if(isFinite(v)){ S.bodyMax = fromDisp(v); S.overrides = {}; render(); }
@@ -839,6 +877,7 @@ window.addEventListener('resize', function(){ drawPreview(); });
 
 /* init */
 syncUnitLabels();
+syncPanes();
 updateSlider();
 S.simVw = 1000; $('simvw').value = 1000;
 render();
