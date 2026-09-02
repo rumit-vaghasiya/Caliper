@@ -97,6 +97,8 @@ select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8p
 .check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);cursor:pointer;user-select:none}
 .check input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
 .hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.45}
+.hint code{font-family:var(--mono);font-size:11px;background:#EAEEF3;color:var(--ink-2);padding:1px 4px;border-radius:4px}
+.codeinput{font-family:var(--mono);font-size:13px !important;letter-spacing:-.01em}
 
 input[type=range]{-webkit-appearance:none;appearance:none;width:100%;background:transparent;cursor:pointer;height:22px}
 input[type=range]::-webkit-slider-runnable-track{height:4px;background:#DFE4EB;border-radius:99px}
@@ -315,9 +317,13 @@ tr.cross td{background:#FFFAF2}
         <h2>Extras</h2>
         <label class="check" style="margin-bottom:9px"><input type="checkbox" id="inclh"> Add line-height and letter-spacing</label>
         <div class="field">
-          <label for="vprefix">Variable names</label>
-          <div class="ctrl"><input id="vprefix" type="text" value="--site--viewport"></div>
-          <div class="hint">Used by the fluid formula as <code>-min</code> and <code>-max</code>.</div>
+          <label for="vminname">Viewport min variable</label>
+          <div class="ctrl"><input id="vminname" class="codeinput" type="text" value="--site--viewport-min" spellcheck="false" autocapitalize="off" autocomplete="off"></div>
+        </div>
+        <div class="field">
+          <label for="vmaxname">Viewport max variable</label>
+          <div class="ctrl"><input id="vmaxname" class="codeinput" type="text" value="--site--viewport-max" spellcheck="false" autocapitalize="off" autocomplete="off"></div>
+          <div class="hint">Two unitless numbers the fluid formula divides by. Declare both in a <code>:root</code> block. Leading <code>--</code> is added if you forget it.</div>
         </div>
       </div>
     </div>
@@ -385,7 +391,7 @@ tr.cross td{background:#FFFAF2}
     <span class="dotmark" aria-hidden="true">
       <svg viewBox="0 0 32 32"><path d="M5 22h5l12-12h5" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </span>
-    <span><b data-brand>Caliper</b> <span data-version>v2.0</span> · one HTML file, runs offline, nothing leaves your browser.</span>
+    <span><b data-brand>Caliper</b> <span data-version>v2.1</span> · one HTML file, runs offline, nothing leaves your browser.</span>
   </footer>
 </div>
 
@@ -395,7 +401,7 @@ tr.cross td{background:#FFFAF2}
 
 /* ---- rename the tool here ---- */
 var BRAND = 'Caliper';
-var VERSION = '2.0';
+var VERSION = '2.1';
 document.title = BRAND + ' — fluid type and clamp() generator';
 [].forEach.call(document.querySelectorAll('[data-brand]'), function(n){ n.textContent = BRAND; });
 [].forEach.call(document.querySelectorAll('[data-version]'), function(n){ n.textContent = 'v' + VERSION; });
@@ -408,7 +414,7 @@ var S = {
   h1Max:4, h1Min:2.5, autoH1Min:true, ratioMax:1.25, ratioMin:1.15,
   anchor:'h1', mobileMode:'shrink',
   levels:6, incBody:true, bodyMax:1.125,
-  inclh:false, vprefix:'--site--viewport',
+  inclh:false, vMinName:'--site--viewport-min', vMaxName:'--site--viewport-max',
   fmt:'clamp', simVw:1000, fit:true,
   sample:'Type that scales with the screen',
   overrides:{}
@@ -430,6 +436,12 @@ function fromDisp(v){ return S.unit==='px' ? v/S.root : v; }
 function vwDisp(px){ return S.unit==='px' ? Math.round(px) : Math.round(px/S.root*10000)/10000; }
 function vwFrom(v){ return S.unit==='px' ? v : v*S.root; }
 
+function cssVar(v,fallback){
+  v = String(v==null?'':v).trim().replace(/\s+/g,'-');
+  if(!v) return fallback;
+  if(v.slice(0,2) !== '--') v = '--' + v.replace(/^-+/,'');
+  return v;
+}
 function lineHeightFor(r){
   if(r<1.2) return 1.6; if(r<1.6) return 1.45; if(r<2.2) return 1.3;
   if(r<3) return 1.2; if(r<4.2) return 1.1; return 1.05;
@@ -463,7 +475,8 @@ function clampStr(minRem,maxRem){
 }
 function formulaStr(minRem,maxRem){
   var a = fmt(minRem), b = fmt(maxRem);
-  var mn = 'var(' + S.vprefix + '-min)', mx = 'var(' + S.vprefix + '-max)';
+  var mn = 'var(' + cssVar(S.vMinName,'--site--viewport-min') + ')';
+  var mx = 'var(' + cssVar(S.vMaxName,'--site--viewport-max') + ')';
   var d = '(' + b + ' - ' + a + ') / (' + mx + ' - ' + mn + ')';
   return 'clamp(' + a + ' * 1rem, ((' + a + ' - (' + d + ' * ' + mn + ')) * 1rem + (' + d + ') * 100vw), ' + b + ' * 1rem)';
 }
@@ -475,7 +488,8 @@ function extras(maxRem){
   return out;
 }
 function rootVars(){
-  return [S.vprefix + '-min: ' + fmt(S.vwMinPx/S.root) + ';', S.vprefix + '-max: ' + fmt(S.vwMaxPx/S.root) + ';'];
+  return [cssVar(S.vMinName,'--site--viewport-min') + ': ' + fmt(S.vwMinPx/S.root) + ';',
+          cssVar(S.vMaxName,'--site--viewport-max') + ': ' + fmt(S.vwMaxPx/S.root) + ';'];
 }
 
 /* ---------------- rows ---------------- */
@@ -812,7 +826,8 @@ $('bodymax').addEventListener('input', function(){
 $('levels').addEventListener('change', function(){ S.levels = parseInt(this.value,10); render(); });
 $('ratiomax').addEventListener('change', function(){ S.ratioMax = parseFloat(this.value); S.overrides = {}; render(); });
 $('ratiomin').addEventListener('change', function(){ S.ratioMin = parseFloat(this.value); S.overrides = {}; render(); });
-$('vprefix').addEventListener('input', function(){ S.vprefix = this.value.trim() || '--site--viewport'; render(); });
+$('vminname').addEventListener('input', function(){ S.vMinName = this.value; render(); });
+$('vmaxname').addEventListener('input', function(){ S.vMaxName = this.value; render(); });
 $('sample').addEventListener('input', function(){ S.sample = this.value; drawPreview(); });
 $('resetScale').addEventListener('click', function(){ S.overrides = {}; render(); });
 
