@@ -50,24 +50,25 @@
   --mono:"Geist Mono",ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
 }
 *{box-sizing:border-box}
+/* 1% tracking on every element. letter-spacing inherits as a fixed length, so setting it on body alone
+   would only be exactly 1% at 14px; a rule on * resolves the em against each element's own font size */
+*,*::before,*::after{letter-spacing:.01em}
 html,body{margin:0;padding:0}
 body{
   background:var(--bg);
   color:var(--ink);
   font-family:var(--font);
-  /* body font: Geist, Medium, 14px, -2% tracking, 100% line height */
+  /* body font: Geist, Medium, 14px, 1% tracking (set by the * rule above), 100% line height */
   font-weight:500;
   font-size:14px;
-  letter-spacing:-.02em;
   line-height:1;
   -webkit-font-smoothing:antialiased;
   font-variant-numeric:tabular-nums;
 }
 /* controls keep a normal line box so hit areas stay the same size */
-button,input,select,textarea{font:inherit;letter-spacing:inherit;line-height:1.5;color:inherit;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;line-height:1.5;color:inherit;font-variant-numeric:tabular-nums}
 /* text that can wrap needs real leading; a 100% line height would stack lines on top of each other */
 h2,label,.hint,.note,.brand p,.foot,table{line-height:1.35}
-pre,code,.mono,.codeinput{letter-spacing:0}
 button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
@@ -77,7 +78,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .brand{display:flex;align-items:center;gap:11px;min-width:0}
 .mark{flex:0 0 auto;width:36px;height:36px;border-radius:10px;background:var(--accent);display:grid;place-items:center;box-shadow:0 1px 2px rgba(15,98,254,.35)}
 .mark svg{width:21px;height:21px;display:block}
-.brand h1{font-size:19px;line-height:1.2;margin:0;letter-spacing:-.02em;font-weight:650}
+.brand h1{font-size:19px;line-height:1.2;margin:0;font-weight:650}
 .brand p{margin:2px 0 0;color:var(--muted);font-size:13px}
 .foot{display:flex;align-items:center;gap:9px;margin-top:20px;padding:0 2px;color:var(--muted);font-size:12.5px}
 .foot .dotmark{flex:0 0 auto;width:18px;height:18px;border-radius:5px;background:#C6D2E4;display:grid;place-items:center}
@@ -97,7 +98,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 @media (max-width:1000px){.side{position:static;max-height:none;overflow:visible}}
 .block{padding:16px 18px;border-bottom:1px solid var(--line-2)}
 .block:last-child{border-bottom:0}
-.block h2{margin:0 0 12px;font-size:13px;font-weight:650;letter-spacing:-.005em;color:var(--ink)}
+.block h2{margin:0 0 12px;font-size:13px;font-weight:600;color:var(--ink)}
 .block h2 span{font-weight:400;color:var(--muted)}
 
 /* ---------- form ---------- */
@@ -120,7 +121,7 @@ select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8p
 .check input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
 .hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.45}
 .hint code{font-family:var(--mono);font-size:11px;background:#EAEEF3;color:var(--ink-2);padding:1px 4px;border-radius:4px}
-.codeinput{font-family:var(--mono);font-size:13px !important;letter-spacing:0}
+.codeinput{font-family:var(--mono);font-size:13px !important}
 
 input[type=range]{-webkit-appearance:none;appearance:none;width:100%;background:transparent;cursor:pointer;height:22px}
 input[type=range]::-webkit-slider-runnable-track{height:4px;background:#DFE4EB;border-radius:99px}
@@ -185,7 +186,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .bplabels{position:relative;height:16px;margin-top:2px}
 .bplabels span{position:absolute;transform:translateX(-50%);font-size:10.5px;color:var(--muted);white-space:nowrap}
 .readout{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-top:12px}
-.readout .big{font-size:26px;font-weight:600;letter-spacing:-.02em}
+.readout .big{font-size:26px;font-weight:600}
 .readout .sub{font-size:13px;color:var(--muted)}
 .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-inline-end:6px;vertical-align:1px}
 
@@ -196,7 +197,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .dots i{width:8px;height:8px;border-radius:50%;background:#D9DEE6;display:block}
 .stageview{position:relative;overflow:hidden}
 .page{transform-origin:top left;background:#fff;padding:36px 28px}
-.page .h{margin:0 0 .4em;letter-spacing:-.02em;font-weight:640;color:var(--ink);word-break:break-word}
+.page .h{margin:0 0 .4em;font-weight:640;color:var(--ink);word-break:break-word}
 .page p{margin:0;color:#5A6473;max-width:64ch}
 
 /* ---------- table ---------- */
