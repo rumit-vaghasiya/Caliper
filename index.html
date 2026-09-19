@@ -46,19 +46,27 @@
   --track:#E7EBF1;
   --track-strong:#E1E6ED;
   --hover:#EEF1F5;
+  --control-line:#8792A2;
+  --control-line-hover:#697586;
+  --accent-hover:#0353E9;
+  --accent-active:#002D9C;
+  --shadow-popover:0 0 0 1px oklch(0 0 0 / .08),0 4px 8px -2px oklch(0 0 0 / .08),0 12px 24px -4px oklch(0 0 0 / .10);
+  --icon-check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+  --icon-chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23697586' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   --font:"Geist",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   --mono:"Geist Mono",ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
 }
 *{box-sizing:border-box}
-/* 1% tracking on every element. letter-spacing inherits as a fixed length, so setting it on body alone
-   would only be exactly 1% at 14px; a rule on * resolves the em against each element's own font size */
-*,*::before,*::after{letter-spacing:.01em}
+/* 1.5% tracking on every element, 2% on headings. letter-spacing inherits as a fixed length, so setting it
+   on body alone would only be exact at 14px; rules on * and on the headings resolve the em per element */
+*,*::before,*::after{letter-spacing:.015em}
+:is(h1,h2,h3,h4,h5,h6),:is(h1,h2,h3,h4,h5,h6) *{letter-spacing:.02em}
 html,body{margin:0;padding:0}
 body{
   background:var(--bg);
   color:var(--ink);
   font-family:var(--font);
-  /* body font: Geist, Medium, 14px, 1% tracking (set by the * rule above), 100% line height */
+  /* body font: Geist, Medium, 14px, 1.5% tracking (set by the * rule above), 100% line height */
   font-weight:500;
   font-size:14px;
   line-height:1;
@@ -98,7 +106,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 @media (max-width:1000px){.side{position:static;max-height:none;overflow:visible}}
 .block{padding:16px 18px;border-bottom:1px solid var(--line-2)}
 .block:last-child{border-bottom:0}
-.block h2{margin:0 0 12px;font-size:13px;font-weight:600;color:var(--ink)}
+.block h2{margin:0 0 12px;font-size:15px;font-weight:600;color:var(--ink)}
 .block h2 span{font-weight:400;color:var(--muted)}
 
 /* ---------- form ---------- */
@@ -116,9 +124,37 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .seg{display:inline-flex;background:var(--track);border-radius:7px;padding:2px}
 .seg button{border:0;background:transparent;padding:5px 11px;border-radius:5px;cursor:pointer;font-size:12.5px;color:var(--ink-2);font-weight:550;transition-property:background-color,color,box-shadow;transition-duration:150ms;transition-timing-function:var(--ease-out)}
 .seg button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(14,17,22,.10)}
-select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);font-size:14px;cursor:pointer}
+/* select: the native element, with the same fill, border, radius and focus as the text inputs above.
+   The chevron is a background so it works in every browser. */
+select{appearance:none;-webkit-appearance:none;width:100%;padding:8px 10px;padding-inline-end:34px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2) var(--icon-chevron) no-repeat right 10px center/16px;font-size:14px;cursor:pointer;transition-property:border-color,background-color;transition-duration:120ms;transition-timing-function:var(--ease-out)}
+select:dir(rtl){background-position:left 10px center}
+select:focus{outline:0;border-color:var(--accent);background-color:#fff}
+/* customizable select (Chromium): the open list gets the tool's surface too. Other browsers keep their native list. */
+@supports (appearance:base-select){
+  select,::picker(select){appearance:base-select}
+  select::picker-icon{display:none}
+  /* radius 10 = option radius 6 + padding 4; slower in (180ms), quicker out (120ms), scaled from the trigger edge */
+  ::picker(select){margin-block:6px;padding:4px;border:0;border-radius:10px;background:var(--surface);box-shadow:var(--shadow-popover);opacity:0;scale:.96;transform-origin:top;transition-property:opacity,scale,overlay,display;transition-duration:120ms;transition-timing-function:var(--ease-out);transition-behavior:allow-discrete}
+  ::picker(select):popover-open{opacity:1;scale:1;transition-duration:180ms}
+  @starting-style{::picker(select):popover-open{opacity:0;scale:.96}}
+  /* focus moves into the list while it is open, so the trigger keeps its focused look via :open */
+  select:open{border-color:var(--accent);background-color:#fff}
+  option{padding:8px 10px;border-radius:6px;font-size:14px;cursor:pointer;transition-property:background-color;transition-duration:100ms;transition-timing-function:var(--ease-out)}
+  option + option{margin-block-start:2px}
+  option:focus-visible{outline-offset:-2px}
+  option:checked{background:var(--accent-weak)}
+  option::checkmark{order:1;margin-inline-start:auto;content:"";width:16px;height:16px;background:var(--accent);-webkit-mask:var(--icon-check) center/16px no-repeat;mask:var(--icon-check) center/16px no-repeat}
+  @media (hover:hover) and (pointer:fine){option:not(:checked):hover{background:var(--hover)}}
+  @media (pointer:coarse){option{min-height:44px}}
+}
 .check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);cursor:pointer;user-select:none}
-.check input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
+/* checkbox: the native input, so keyboard, focus and screen readers are untouched. The outline stays a real border
+   (form controls keep borders for contrast); --control-line is 3:1 or better against the panel. */
+.check input{appearance:none;-webkit-appearance:none;position:relative;flex:0 0 auto;width:16px;height:16px;margin:0;border:1px solid var(--control-line);border-radius:5px;background:var(--surface);cursor:pointer;transition-property:background-color,border-color;transition-duration:150ms;transition-timing-function:var(--ease-out)}
+.check input:checked{background:var(--accent);border-color:var(--accent)}
+/* check mark: the contextual icon swap (scale .25 to 1, opacity 0 to 1, blur 4px to 0), same as the copy button */
+.check input::after{content:"";position:absolute;inset:-1px;background:#fff;-webkit-mask:var(--icon-check) center/16px no-repeat;mask:var(--icon-check) center/16px no-repeat;opacity:0;scale:.25;filter:blur(4px);transition-property:opacity,filter,scale;transition-duration:300ms;transition-timing-function:var(--ease-icon)}
+.check input:checked::after{opacity:1;scale:1;filter:blur(0)}
 .hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.45}
 .hint code{font-family:var(--mono);font-size:11px;background:#EAEEF3;color:var(--ink-2);padding:1px 4px;border-radius:4px}
 .codeinput{font-family:var(--mono);font-size:13px !important}
@@ -145,13 +181,14 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .code .c{color:#7B8798}
 .copy{position:absolute;top:10px;inset-inline-end:10px;min-width:78px;justify-content:center;border:0;background:#1A2432;color:#C9D4E3;box-shadow:var(--ring-dark);border-radius:7px;padding:6px 10px 6px 8px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px;transition-property:background-color,color,box-shadow;transition-duration:150ms;transition-timing-function:var(--ease-out)}
 .copy.done{background:#12331F;color:#8AE6AC;box-shadow:0 0 0 1px #1F5B34}
-/* copy -> check cross-fade: both icons stay mounted, so it retargets if clicked again mid-flight */
+/* copy -> check contextual icon swap (scale .25 to 1, opacity 0 to 1, blur 4px to 0): both icons stay mounted,
+   so it retargets if clicked again mid-flight */
 .ic{position:relative;flex:0 0 auto;width:16px;height:16px}
-.ic svg{position:absolute;inset:0;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;transition-property:opacity,filter;transition-duration:300ms;transition-timing-function:var(--ease-icon)}
+.ic svg{position:absolute;inset:0;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;transition-property:opacity,filter,scale;transition-duration:300ms;transition-timing-function:var(--ease-icon)}
 .ic svg path,.ic svg rect{vector-effect:non-scaling-stroke}
-.ic .i-check{opacity:0;filter:blur(4px)}
-.copy.done .i-copy{opacity:0;filter:blur(4px)}
-.copy.done .i-check{opacity:1;filter:blur(0)}
+.ic .i-check{opacity:0;filter:blur(4px);scale:.25}
+.copy.done .i-copy{opacity:0;filter:blur(4px);scale:.25}
+.copy.done .i-check{opacity:1;filter:blur(0);scale:1}
 .btn{border:0;box-shadow:var(--shadow-border);background:var(--surface-2);color:var(--ink);padding:7px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:550;transition-property:background-color,box-shadow;transition-duration:150ms;transition-timing-function:var(--ease-out)}
 .btn.primary{background:var(--ink);color:#fff;box-shadow:none}
 
@@ -164,12 +201,16 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
   .btn:hover{background:var(--hover);box-shadow:var(--shadow-border-hover)}
   .btn.primary:hover{background:#1C2430}
   .iconbtn:not(.done):hover{background:var(--surface-2);box-shadow:var(--shadow-border-hover)}
+  .check:hover input:not(:checked){border-color:var(--control-line-hover)}
+  .check:hover input:checked{background:var(--accent-hover);border-color:var(--accent-hover)}
 }
 /* pressed feedback is a colour change only, nothing moves or resizes on click (after hover so it wins) */
 .copy:not(.done):active{background:#2A3A50}
 .btn:active{background:#E4E8EE}
 .btn.primary:active{background:#2A3444}
 .iconbtn:not(.done):active{background:var(--track)}
+.check:active input:not(:checked){background:var(--track)}
+.check:active input:checked{background:var(--accent-active);border-color:var(--accent-active)}
 
 .note{display:flex;gap:9px;background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--warn);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin-top:12px}
 .note b{font-weight:650}
@@ -217,15 +258,20 @@ td.mono{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
 .ctrl.mini input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .clampcell{max-width:270px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 tr.cross td{background:#FFFAF2}
-.flag{display:inline-block;margin-inline-start:7px;font-size:10px;font-weight:650;color:var(--warn);background:#FFEFD9;border:1px solid var(--warn-line);border-radius:5px;padding:1px 5px;letter-spacing:.01em}
+.flag{display:inline-block;margin-inline-start:7px;font-size:10px;font-weight:650;color:var(--warn);background:#FFEFD9;border:1px solid var(--warn-line);border-radius:5px;padding:1px 5px}
 .iconbtn{border:0;box-shadow:var(--shadow-border);background:#fff;border-radius:6px;padding:4px 8px;min-width:62px;text-align:center;cursor:pointer;font-size:11.5px;color:var(--ink-2);transition-property:background-color,color,box-shadow;transition-duration:150ms;transition-timing-function:var(--ease-out)}
 .iconbtn.done{background:#E8F7EE;color:#186A38;box-shadow:0 0 0 1px #B7E3C7}
 .scroll{overflow-x:auto}
 .hidden{display:none !important}
 .spacer{height:14px}
-/* reduced motion: keep the opacity cross-fade, drop the blur */
+/* reduced motion: keep the opacity cross-fade, drop the blur and the scale */
 @media (prefers-reduced-motion:reduce){
-  .ic svg{filter:none !important;transition-duration:120ms}
+  .ic svg,.check input::after{filter:none !important;scale:1 !important;transition-duration:120ms}
+  ::picker(select){scale:1 !important}
+}
+/* forced colors (Windows high contrast) repaints backgrounds, so the check mark needs its own system colour */
+@media (forced-colors:active){
+  .check input::after{background-color:CanvasText;forced-color-adjust:none}
 }
 </style>
 </head>
