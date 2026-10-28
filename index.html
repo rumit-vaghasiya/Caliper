@@ -168,6 +168,23 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .inline{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .val{font-size:12.5px;color:var(--ink);font-weight:600}
 
+/* Breakpoint suggestions follow the same fluid curve as the output. */
+.bp-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.bp-option{display:flex;flex-direction:column;align-items:center;gap:7px;padding:11px 2px;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer;color:var(--ink-2);font-size:10px;transition:background-color 120ms,color 120ms,border-color 120ms}
+.bp-option:hover{background:var(--surface-2)}
+.bp-option[aria-pressed="true"]{background:var(--accent-weak);border-color:var(--accent);color:var(--accent)}
+.bp-option strong{font-size:12px;font-weight:600;white-space:nowrap}
+.bp-width,.bp-range{font-size:10px;color:var(--muted);white-space:nowrap}
+.bp-option[aria-pressed="true"] :is(.bp-width,.bp-range){color:var(--accent)}
+.bp-device{display:grid;place-items:center;width:24px;height:20px}
+.bp-device::before{content:"";width:11px;height:17px;border:1.5px solid currentColor;border-radius:2px}
+.bp-device.tablet::before{width:14px;height:18px}
+.bp-device.landscape::before{width:19px;height:11px}
+.bp-device.desktop::before{width:23px;height:15px;box-shadow:0 4px 0 -3px currentColor}
+.bp-detail{margin-top:12px;font-size:12px;line-height:1.5;color:var(--muted)}
+.bp-detail b{display:block;color:var(--ink-2);font-weight:600;margin-bottom:3px}
+.bp-copy{margin-top:9px}
+
 /* ---------- output ---------- */
 .outhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:11px}
 .fmt{display:flex;gap:2px;background:var(--track);padding:2px;border-radius:7px;flex-wrap:wrap}
@@ -332,12 +349,12 @@ tr.cross td{background:#FFFAF2}
       <div class="block" data-pane="single">
         <h2>Size</h2>
         <div class="field">
-          <label for="maxsize">Desktop size <span style="color:var(--muted)">(at viewport max)</span></label>
+          <label for="maxsize">Desktop size <span id="maxsizeWidth">(at 1440px)</span></label>
           <div class="ctrl"><input id="maxsize" type="number" step="0.05" value="4"><span class="unit" data-u>rem</span></div>
         </div>
         <div class="field">
           <div class="inline" style="margin-bottom:5px">
-            <label class="lbl" style="margin:0" for="minsize">Mobile size <span>(at viewport min)</span></label>
+            <label class="lbl" style="margin:0" for="minsize">Mobile size <span id="minsizeWidth">(at 320px)</span></label>
             <label class="check" style="font-size:12px"><input type="checkbox" id="automin" checked> Suggest</label>
           </div>
           <div class="ctrl"><input id="minsize" type="number" step="0.05" value="2.5"><span class="unit" data-u>rem</span></div>
@@ -402,6 +419,19 @@ tr.cross td{background:#FFFAF2}
         <div class="inline"><span class="lbl" style="margin:0">How much mobile shrinks</span><span class="val" id="shrinkVal">50%</span></div>
         <input type="range" id="shrink" min="0" max="85" step="5" value="50">
         <div class="hint" id="shrinkHint"></div>
+      </div>
+
+      <div class="block">
+        <h2 id="bpHeading">Sizes at breakpoints</h2>
+        <div class="bp-options" id="bpOptions" role="group" aria-label="Preview a Webflow breakpoint" aria-describedby="bpHint">
+          <button type="button" class="bp-option" data-bp="desktop" aria-pressed="false" title="Desktop: 992px and up. Base styles apply at all widths unless overridden."><span class="bp-device desktop" aria-hidden="true"></span><span>Desktop</span><span class="bp-range"></span><strong></strong><span class="bp-width"></span></button>
+          <button type="button" class="bp-option" data-bp="tablet" aria-pressed="false" title="Tablet: 768–991px. Styles cascade to smaller breakpoints unless overridden."><span class="bp-device tablet" aria-hidden="true"></span><span>Tablet</span><span class="bp-range"></span><strong></strong><span class="bp-width"></span></button>
+          <button type="button" class="bp-option" data-bp="landscape" aria-pressed="false" title="Mobile landscape: 480–767px. Styles cascade to mobile portrait unless overridden."><span class="bp-device landscape" aria-hidden="true"></span><span>Mobile (L)</span><span class="bp-range"></span><strong></strong><span class="bp-width"></span></button>
+          <button type="button" class="bp-option" data-bp="portrait" aria-pressed="false" title="Mobile portrait: 240–479px."><span class="bp-device portrait" aria-hidden="true"></span><span>Mobile (P)</span><span class="bp-range"></span><strong></strong><span class="bp-width"></span></button>
+        </div>
+        <div class="bp-detail" id="bpDetail" aria-live="polite"></div>
+        <button type="button" class="iconbtn bp-copy" id="copyBreakpoint">Copy size</button>
+        <div class="hint" id="bpHint">Desktop and Mobile (P) use your endpoint widths within their ranges. Select a device to preview its size.</div>
       </div>
 
       <div class="block">
@@ -523,7 +553,39 @@ var RATIOS = [
   ['1.25','Major third 1.25'],['1.333','Perfect fourth 1.333'],['1.414','Augmented fourth 1.414'],
   ['1.5','Perfect fifth 1.5'],['1.618','Golden ratio 1.618']
 ];
-var BPS = [375,480,768,992,1280,1440,1920];
+var BPS = [375,479,767,991,1280,1440,1920];
+var DEVICES = [
+  {key:'desktop', label:'Desktop', range:'992px and up', width:function(){return Math.max(992, S.vwMaxPx);}},
+  {key:'tablet', label:'Tablet', range:'768–991px', width:function(){return 991;}},
+  {key:'landscape', label:'Mobile landscape', range:'480–767px', width:function(){return 767;}},
+  // Preview the mobile endpoint inside the portrait range, matching the mobile size field.
+  {key:'portrait', label:'Mobile portrait', range:'240–479px', width:function(){return Math.min(479, Math.max(240, S.vwMinPx));}}
+];
+function activeDevice(){
+  return DEVICES[S.simVw>=992 ? 0 : S.simVw>=768 ? 1 : S.simVw>=480 ? 2 : 3];
+}
+function breakpointSize(width){
+  var r = currentRows()[0];
+  return resolve(r.min,r.max,width);
+}
+function drawBreakpointSuggestions(){
+  var active = activeDevice();
+  $('bpHeading').textContent = S.tab==='scale' ? 'H1 sizes at breakpoints' : 'Sizes at breakpoints';
+  DEVICES.forEach(function(device){
+    var button = document.querySelector('[data-bp="'+device.key+'"]');
+    var value = breakpointSize(device.width());
+    var endpoint = device.key==='desktop' || device.key==='portrait';
+    button.querySelector('strong').textContent = (endpoint ? toDisp(value) : fmt(S.unit==='px' ? value*S.root : value, 2))+S.unit;
+    button.querySelector('.bp-width').textContent = 'at '+fmt(device.width(),2)+'px';
+    button.querySelector('.bp-range').textContent = device.key==='desktop' ? '992px+' : device.range;
+    button.setAttribute('aria-pressed', String(active.key===device.key));
+    button.setAttribute('aria-label', device.label+', '+device.range+', '+button.querySelector('strong').textContent+', preview at '+device.width()+'px');
+  });
+  var width = active.width(), value = breakpointSize(width);
+  $('bpDetail').innerHTML = '<b>'+active.label+': '+active.range+'</b>'+
+    (S.tab==='scale' ? 'H1: ' : '')+fmt(value,4)+'rem / '+fmt(value*S.root,2)+'px at '+width+'px wide.';
+  $('copyBreakpoint').dataset.value = fmt(S.unit==='px' ? value*S.root : value,4)+S.unit;
+}
 
 /* ---------------- helpers ---------------- */
 function $(id){ return document.getElementById(id); }
@@ -693,7 +755,7 @@ function series(){
 function drawChart(){
   var svg = $('chart'), W=1000, H=168, padT=12, padB=16;
   var s = series();
-  var loPx = Math.max(200, S.vwMinPx*0.72), hiPx = S.vwMaxPx*1.18;
+  var loPx = Number($('simvw').min), hiPx = Number($('simvw').max);
   if(!(hiPx > loPx)) hiPx = loPx + 100;
   var top = 0; s.forEach(function(x){ top = Math.max(top, x.max, x.min); });
   top = top*1.12 || 1;
@@ -815,6 +877,7 @@ function render(){
 
   drawChart();
   drawPreview();
+  drawBreakpointSuggestions();
   if(S.tab==='single') drawBpTable(); else drawScaleTable();
 
   // sync inputs (never fight the field the user is typing in)
@@ -822,13 +885,15 @@ function render(){
   if(S.autoH1Min || document.activeElement !== $('h1min')) $('h1min').value = toDisp(S.h1Min);
   $('minsize').readOnly = S.autoMin;
   $('h1min').readOnly = S.autoH1Min;
+  $('maxsizeWidth').textContent = '(at '+fmt(S.vwMaxPx,2)+'px)';
+  $('minsizeWidth').textContent = '(at '+fmt(S.vwMinPx,2)+'px)';
   $('shrinkVal').textContent = Math.round(S.shrink*100)+'%';
   var un = S.unit==='px' ? 'px' : 'rem';
   var showShrink = (S.tab==='single' && S.autoMin) || (S.tab==='scale' && S.mobileMode==='shrink');
   $('shrinkBlock').classList.toggle('hidden', !showShrink);
   $('shrinkHint').textContent = S.tab==='scale'
     ? 'Every level is pulled toward your body size by this much. Body size itself never moves.'
-    : 'A ' + toDisp(S.maxRem) + un + ' heading becomes ' + toDisp(suggest(S.maxRem)) + un + ' on mobile.';
+    : 'A ' + toDisp(S.maxRem) + un + ' heading at ' + fmt(S.vwMaxPx,2) + 'px becomes ' + toDisp(suggest(S.maxRem)) + un + ' at ' + fmt(S.vwMinPx,2) + 'px.';
   $('mobileHint').textContent = S.mobileMode==='shrink'
     ? 'Each mobile size comes from its own desktop size, so levels can never cross over.'
     : 'Full control. Watch the bottom of the scale: a tighter mobile ratio can push small levels above their desktop size.';
@@ -937,13 +1002,19 @@ $('sample').addEventListener('input', function(){ S.sample = this.value; drawPre
 $('resetScale').addEventListener('click', function(){ S.overrides = {}; render(); });
 
 function updateSlider(){
-  var lo = Math.max(200, Math.round(S.vwMinPx*0.72)), hi = Math.round(S.vwMaxPx*1.18);
+  var lo = Math.min(DEVICES[3].width(), Math.max(240, Math.round(S.vwMinPx*0.72))), hi = Math.max(992, Math.round(S.vwMaxPx*1.18));
   var sl = $('simvw');
   sl.min = lo; sl.max = hi;
   S.simVw = Math.min(hi, Math.max(lo, S.simVw));
   sl.value = S.simVw;
 }
 $('simvw').addEventListener('input', function(){ S.simVw = parseInt(this.value,10); render(); });
+$('bpOptions').addEventListener('click', function(e){
+  var button = e.target.closest('[data-bp]'); if(!button) return;
+  var device = DEVICES.filter(function(d){ return d.key===button.dataset.bp; })[0];
+  S.simVw = device.width(); updateSlider(); render();
+});
+$('copyBreakpoint').addEventListener('click', function(){ copyText(this.dataset.value, this, 'Copy size'); });
 
 $('chart').addEventListener('pointerdown', function(e){
   var rect = this.getBoundingClientRect();
@@ -962,7 +1033,7 @@ document.addEventListener('input', function(e){
   S.overrides[k][el.dataset.side] = fromDisp(v);
   var txt = buildOutput();
   $('out').innerHTML = highlight(txt); $('out').dataset.raw = txt;
-  drawChart(); drawPreview();
+  drawChart(); drawPreview(); drawBreakpointSuggestions();
 });
 
 /* copy */

@@ -54,6 +54,8 @@ Rename the prefix in the **Variable names** field if your project uses a differe
 
 The breakpoint table uses Webflow's breakpoints, so you can check a size at 991px before you find it in the Designer.
 
+**Sizes at breakpoints** shows desktop (992px and up), tablet (768–991px), mobile landscape (480–767px), and mobile portrait (240–479px). The desktop card uses your viewport max, at least 992px; mobile portrait uses your viewport min, constrained to 240–479px. Tablet and landscape show calculated sizes at the upper end of their ranges. Each card shows both its range and the exact preview width. With the defaults, both the mobile field and portrait card show 2.5rem at 320px. Select a device to jump the chart and preview to that width, or use **Copy size** to copy its value in your selected unit. In Type scale mode, cards show H1. Values follow your current curve, including manual sizes and scale overrides. The generated CSS remains fluid between your two endpoints.
+
 ## The maths
 
 All of it in rem, where `vwMin` and `vwMax` are your viewport range converted to rem:
